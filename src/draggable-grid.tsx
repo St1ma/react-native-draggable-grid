@@ -1,18 +1,18 @@
 import * as React from 'react'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  PanResponder,
   Animated,
-  StyleSheet,
-  StyleProp,
   GestureResponderEvent,
+  I18nManager,
+  PanResponder,
   PanResponderGestureState,
-  ViewStyle,
   Platform,
-  I18nManager
+  StyleProp,
+  StyleSheet,
+  ViewStyle
 } from 'react-native'
 import { Block } from './block'
-import { findKey, findIndex, differenceBy } from './utils'
+import { differenceBy, findIndex, findKey } from './utils'
 
 export interface IOnLayoutEvent {
   nativeEvent: { layout: { x: number; y: number; width: number; height: number } }
@@ -62,7 +62,7 @@ export const DraggableGrid = function<DataType extends IBaseItemType>(
   const [blockPositions] = useState<IPositionOffset[]>([])
   const [orderMap] = useState<IMap<IOrderMapItem>>({})
   const [itemMap] = useState<IMap<DataType>>({})
-  const [items] = useState<IItem<DataType>[]>([])
+  const [items, setItems] = useState<IItem<DataType>[]>([])
   const [blockHeight, setBlockHeight] = useState(0)
   const [blockWidth, setBlockWidth] = useState(0)
   const [gridHeight] = useState<Animated.Value>(new Animated.Value(0))
@@ -77,14 +77,12 @@ export const DraggableGrid = function<DataType extends IBaseItemType>(
   const [activeItemIndex, setActiveItemIndex] = useState<undefined | number>()
 
   const assessGridSize = (event: IOnLayoutEvent) => {
-    if (!hadInitBlockSize) {
-      let blockWidth = event.nativeEvent.layout.width / props.numColumns
-      let blockHeight = props.itemHeight || blockWidth
-      setBlockWidth(blockWidth)
-      setBlockHeight(blockHeight)
-      setGridLayout(event.nativeEvent.layout)
-      setHadInitBlockSize(true)
-    }
+    let blockWidth = event.nativeEvent.layout.width / props.numColumns
+    let blockHeight = props.itemHeight || blockWidth
+    setBlockWidth(blockWidth)
+    setBlockHeight(blockHeight)
+    setGridLayout(event.nativeEvent.layout)
+    setHadInitBlockSize(true)
   }
   const [panResponderCapture, setPanResponderCapture] = useState(false)
 
@@ -106,12 +104,10 @@ export const DraggableGrid = function<DataType extends IBaseItemType>(
     })
   }
   function getBlockPositionByOrder(order: number) {
-    if (blockPositions[order]) {
-      return blockPositions[order]
-    }
     const columnOnRow = order % props.numColumns
     const y = blockHeight * Math.floor(order / props.numColumns)
     const x = columnOnRow * blockWidth
+
     return {
       x,
       y,
@@ -328,6 +324,15 @@ export const DraggableGrid = function<DataType extends IBaseItemType>(
       currentPosition: new Animated.ValueXY(getBlockPositionByOrder(index)),
     })
   }
+
+  useEffect(() => {
+    setItems(items.map((item, index) => {
+      return {
+        ...item,
+        currentPosition: new Animated.ValueXY(getBlockPositionByOrder(index)),
+      };
+    }));
+  }, [blockWidth])
 
   function removeItem(item: IItem<DataType>) {
     const itemIndex = findIndex(items, curItem => curItem.key === item.key)
